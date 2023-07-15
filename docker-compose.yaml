@@ -1,0 +1,75 @@
+version: "3"
+
+services:
+  calibre:
+    image: ghcr.io/linuxserver/calibre
+    container_name: calibre
+    environment:
+      - PUID=$PUID #change this to your user's PID
+      - PGID=$PGID #change this to your user's PGID
+    volumes:
+      - ~/calibre/config:/config #change before the ':'
+      - ~/calibre/upload:/uploads #change before the ':'
+      - ~/calibre/plugins:/plugins #change before the ':'
+      - ~/CalibreLibrary:/Calibre_Library #this is where your ebooks will end up
+    ports:
+      - 8080:8080 #change before the ':' if necessary
+      - 8081:8081 #change before the ':' if necessary
+    restart: unless-stopped
+    networks:
+      - ebooks
+
+  calibre-web:
+    image: ghcr.io/linuxserver/calibre-web
+    container_name: calibre-web
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+    volumes:
+      - ~/calibre/calibre-web:/config
+      - ~/calibre/CalibreLibrary:/books
+    restart: unless-stopped
+    depends_on:
+      - calibre
+    ports:
+      - 8083:8083
+    networks:
+      - ebooks
+
+  # qBitorrent is used to download torrents
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=<your_PUID>
+      - PGID=<your_PGID>
+      - WEB_UI_PORT=8080
+    volumes:
+      - ~/Downloads:/downloads
+      - ~/calibre/config/qbittorrent:/config
+    restart: unless-stopped
+    ports: # qbittorrent
+      - 8080:8080 # qbittorrent
+    networks:
+      - ebooks
+
+  # Radarr is used to query, add downloads to the download queue and index Movies
+  readarr:
+    image: ghcr.io/linuxserver/readarr:nightly
+    container_name: readarr
+    environment:
+      - PUID=$PUID #change to your PID
+      - PGID=$PGID #change to your PGID
+    volumes:
+      - ~/calibre/config/readarr:/config #change before the ':'
+      - ~/calibre/CalibreLibrary:/books #change before the ':'
+      - ~/Downloads:/downloads  #change before the ':'
+    ports:
+      - 8787:8787
+    restart: unless-stopped
+    networks:
+      - ebooks
+
+networks:
+  ebooks:
+    external: true
